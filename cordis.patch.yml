@@ -1,0 +1,44 @@
+# Bundle patch for `@deepseek-ai/dsh-llm-copilot`.
+#
+# A plugin installed into a profile (via `dsh plugin --profile <name> add
+# @deepseek-ai/dsh-llm-copilot`) is automatically appended to the profile's
+# `dsh.profile.bundles` layer list once it declares a `dsh.bundle.patch`
+# (see the package.json `dsh.bundle` field). This patch mounts the plugin into
+# the core composition, the same shape `@deepseek-ai/dsh-base` uses to mount
+# its `llm-deepseek` provider row.
+#
+# Later profile-layer patches address existing rows *by id*; a brand-new plugin
+# row like this one is added with `insert:`, so the row is created rather than
+# treated as a (missing) override target.
+#
+# The Copilot provider route (`copilot-oauth`) registers dormant until its
+# `llm-copilot` settings section resolves a credential reference; an OAuth device
+# login (`dsh-copilot-auth login`) writes the GitHub OAuth token that the
+# adapter exchanges for a short-lived Copilot API session token per request.
+
+- insert:
+    - id: llm-copilot
+      name: '@deepseek-ai/dsh-llm-copilot'
+      config:
+        # Reference to the credential that holds the long-lived GitHub OAuth
+        # access token produced by the OAuth device flow. The adapter exchanges
+        # it for a short-lived Copilot API session token on each request.
+        # Resolve it with:
+        #   dsh-copilot-auth login   # writes GITHUB_COPILOT_TOKEN to ~/.dsh/.credentials.yaml
+        # or export GITHUB_COPILOT_TOKEN=<token> in the launching environment.
+        apiKeyEnv: GITHUB_COPILOT_TOKEN
+        # Copilot endpoint. Honored from $COPILOT_BASE_URL when set (trusted layers),
+        # otherwise the public chat-completions host.
+        baseURL: https://api.githubcopilot.com
+        # Per-request output cap and the default context capacity exposed to the
+        # model selector for unlisted pass-through model ids.
+        maxTokens: 16384
+        defaultContextWindow: 200000
+        # Hand-authored catalog used when live `/models` discovery is unavailable.
+        # Copilot's catalog changes with your subscription, so `discoverModels: true`
+        # (the default) probes `/models` per request path and falls back here.
+        discoverModels: true
+        # Per-request stream read budget, covering the initial fetch. A request
+        # whose `options.signal` is undefined gets its own abort so idle edge reads
+        # are bounded.
+        streamIdleTimeoutMs: 300000
