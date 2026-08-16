@@ -78,28 +78,6 @@ This works whether the package is installed from the registry, from git, or
 linked from a local checkout; `dsh plugin` anchors relative path specs to the
 directory you invoke it from.
 
-### Troubleshooting
-
-**`Cannot find package '@deepseek-ai/dsh-home-paths'` / `ERR_MODULE_NOT_FOUND`
-when `dsh` boots.** The plugin's imports are resolved by Node's ordinary
-parent-directory walk starting at the plugin's *real* location. A
-profile-managed install (pnpm) materializes the package under
-`$DSH_HOME/profiles/`, where the walk finds `$DSH_HOME/profiles/node_modules` —
-the flat fallback directory `dsh` maintains on every boot (one symlink per
-package in the installation's dependency closure), so every `@deepseek-ai/*`
-peer resolves. A checkout linked into the profile with a `link:` dependency
-sits *outside* that tree, so the walk stops at `$DSH_HOME/plugins/` and the
-peer imports are unreachable. Point the walk back at the maintained fallback:
-
-```bash
-ln -s "$DSH_HOME/profiles/node_modules" "$DSH_HOME/plugins/node_modules"
-```
-
-(With the default home, `$DSH_HOME` is `~/.dsh`.) `dsh` re-heals the fallback
-directory on every run, so the link stays current as the installation updates.
-The git-URL install above never hits this case, because pnpm resolves the
-plugin's dependencies from inside the profile.
-
 ## Authenticate
 
 ```bash
